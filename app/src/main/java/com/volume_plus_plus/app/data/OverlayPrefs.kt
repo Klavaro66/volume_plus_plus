@@ -80,6 +80,18 @@ class OverlayPrefs(context: Context) {
         prefs.edit().putBoolean(KEY_SETTINGS_OPENS_APP, enabled).apply()
     }
 
+    /**
+     * Whether a per-app volume should be remembered and restored the next time that app plays,
+     * rather than every new playback starting at full. On by default — it is what people expect of a
+     * per-app volume, and the levels are already stored per package either way; switching it off
+     * restores the old behaviour, where a level lasted only as long as the playback session.
+     */
+    fun isRememberAppVolumesEnabled(): Boolean = prefs.getBoolean(KEY_REMEMBER_APP_VOLUMES, true)
+
+    fun setRememberAppVolumesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REMEMBER_APP_VOLUMES, enabled).apply()
+    }
+
     /** Multiplier for the slider's follow speed while a held key is still stepping. */
     fun getHoldFollowScale(): Float = prefs.getFloat(KEY_HOLD_FOLLOW_SCALE, 1f)
 
@@ -115,6 +127,7 @@ class OverlayPrefs(context: Context) {
         const val KEY_SEVEN_EIGHT_VERSION = "seven_eight_version"
         const val KEY_SYSTEM_VOLUME_PANEL = "system_volume_panel"
         const val KEY_SETTINGS_OPENS_APP = "settings_opens_app"
+        const val KEY_REMEMBER_APP_VOLUMES = "remember_app_volumes"
         const val KEY_HOLD_FOLLOW_SCALE = "hold_follow_scale"
         const val KEY_HOLD_SETTLE_SCALE = "hold_settle_scale"
         const val KEY_HOLD_STEP_HAPTICS = "hold_step_haptics"

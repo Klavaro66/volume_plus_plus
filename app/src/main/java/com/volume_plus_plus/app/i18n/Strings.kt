@@ -223,6 +223,11 @@ open class Strings {
         "The panel's SETTINGS / SEE MORE button opens Volume++ instead of Android's sound " +
             "settings."
 
+    open val overlayRememberAppVolumes get() = "Remember each app's volume"
+    open val overlayRememberAppVolumesDetail get() =
+        "An app plays at the level you last gave it instead of starting at full. Set an app back " +
+            "to 100% to forget it. Needs Shizuku or root, like the per-app sliders themselves."
+
     // ── Quick Settings tile ─────────────────────────────────────────────────────────────────────
 
     /** The tile's name once it is on screen. The name in the system's tile *picker* comes from

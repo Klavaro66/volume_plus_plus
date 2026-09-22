@@ -181,6 +181,7 @@ private fun OverlaySetup(
     var version by remember { mutableStateOf(OverlayVersion.current(prefs)) }
     var systemVolumePanel by remember { mutableStateOf(prefs.isSystemVolumePanelEnabled()) }
     var settingsOpensApp by remember { mutableStateOf(prefs.isSettingsOpensAppEnabled()) }
+    var rememberAppVolumes by remember { mutableStateOf(prefs.isRememberAppVolumesEnabled()) }
     var holdFollowScale by remember { mutableStateOf(prefs.getHoldFollowScale()) }
     var holdSettleScale by remember { mutableStateOf(prefs.getHoldSettleScale()) }
     var holdStepHaptics by remember { mutableStateOf(prefs.isHoldStepHapticsEnabled()) }
@@ -212,6 +213,7 @@ private fun OverlaySetup(
     LifecycleResumeEffect(Unit) {
         systemVolumePanel = prefs.isSystemVolumePanelEnabled()
         settingsOpensApp = prefs.isSettingsOpensAppEnabled()
+        rememberAppVolumes = prefs.isRememberAppVolumesEnabled()
         holdFollowScale = prefs.getHoldFollowScale()
         holdSettleScale = prefs.getHoldSettleScale()
             holdStepHaptics = prefs.isHoldStepHapticsEnabled()
@@ -345,6 +347,18 @@ private fun OverlaySetup(
                 },
             )
         }
+        // Not tied to `styleEnabled`: the per-app levels are applied by the privileged service
+        // whether or not the volume keys open our panel, so this keeps working with the system
+        // panel in charge.
+        SettingSwitch(
+            title = s.overlayRememberAppVolumes,
+            subtitle = s.overlayRememberAppVolumesDetail,
+            checked = rememberAppVolumes,
+            onCheckedChange = {
+                rememberAppVolumes = it
+                prefs.setRememberAppVolumesEnabled(it)
+            },
+        )
         // Reaching the panel without the volume keys. Deliberately not tied to `styleEnabled`:
         // the tile opens the Volume++ panel whether or not the keys are left to Android's own, and
         // it needs neither the accessibility service nor DND access — only step 1.
