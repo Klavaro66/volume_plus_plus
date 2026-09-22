@@ -302,8 +302,8 @@ open class Strings {
     open val overlayPreview get() = "Preview"
     open val overlayGrantToPreview get() = "Grant overlay to preview"
 
-    /** The app name + version line at the foot of the Overlay tab, e.g. `Volume++ 1.1.0`. */
-    open fun appVersion(appName: String, version: String) = "$appName $version"
+    /** The app name + version line at the foot of the Overlay tab, e.g. `Volume++ v2.0`. */
+    open fun appVersion(appName: String, version: String) = "$appName v$version"
 
     // ── Overlay tab: per-style edit hub ─────────────────────────────────────────────────────────
 
