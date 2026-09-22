@@ -204,6 +204,23 @@ open class Strings {
         "The panel's SETTINGS / SEE MORE button opens Volume++ instead of Android's sound " +
             "settings."
 
+    // ── Quick Settings tile ─────────────────────────────────────────────────────────────────────
+
+    /** The tile's name once it is on screen. The name in the system's tile *picker* comes from
+     *  res/values/strings.xml instead — the OS draws that one before we get a say. */
+    open val qsTileLabel get() = "Volume++ panel"
+
+    open val overlayQuickTile get() = "Quick Settings tile"
+    open val overlayQuickTileDetail get() =
+        "Opens the panel from Quick Settings, so you can still reach it if the volume buttons stop " +
+            "working. Only needs the first step above."
+    open val overlayQuickTileAdd get() = "Add tile"
+
+    /** Shown instead of the button below Android 13, which has no way for an app to offer the tile —
+     *  it can only be dragged in by hand. [tile] is the tile's own name. */
+    open fun overlayQuickTileManual(tile: String) =
+        "Open Quick Settings, tap Edit, and drag in the \"$tile\" tile."
+
     open val overlayMotion get() = "Motion"
     open val overlayMotionInfo get() =
         "Motion controls how the slider moves; haptics control the buzz you feel while you use it. " +

@@ -12,8 +12,10 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.volume_plus_plus.app.overlay.AppVolumeController
 import com.volume_plus_plus.app.overlay.OverlayController
+import com.volume_plus_plus.app.overlay.PanelLauncher
 import com.volume_plus_plus.app.overlay.StepHaptics
 import com.volume_plus_plus.app.data.OverlayPrefs
+import com.volume_plus_plus.app.permissions.Permissions
 import com.volume_plus_plus.app.privileged.PrivilegedManager
 
 /**
@@ -144,6 +146,10 @@ class VolumeKeyService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // The setup checklist's most authoritative answer about this service: we are connected, so
+        // it is enabled, whatever the platform happens to have written into Secure settings. Told
+        // first, so the tick appears while the user is still standing on the Settings screen.
+        Permissions.onServiceConnected()
         // Ensure the privileged link is alive even if the main UI was never opened this process.
         PrivilegedManager.init(this)
         // A repeat connect must not inherit the previous connection's hold: the old panel is about to
@@ -157,7 +163,9 @@ class VolumeKeyService : AccessibilityService() {
         appVolume?.destroy()
         val volume = AppVolumeController(this).also { it.start() }
         appVolume = volume
-        overlay = OverlayController(this, volume)
+        // Lent to the Quick Settings tile so a tile tap and a key press raise the same panel, backed
+        // by the same per-app volume state, rather than two independent ones.
+        overlay = OverlayController(this, volume).also { PanelLauncher.attach(it) }
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -268,9 +276,22 @@ class VolumeKeyService : AccessibilityService() {
 
     override fun onInterrupt() { /* not used */ }
 
+    /** A build that tears the service down without unbinding it first still has to stop claiming
+     *  the service is connected. */
+    override fun onDestroy() {
+        Permissions.onServiceDisconnected()
+        super.onDestroy()
+    }
+
     override fun onUnbind(intent: Intent?): Boolean {
+        // Symmetrical with onServiceConnected: the checklist must untick the moment the service is
+        // switched off, not on the next time something happens to re-read the setting.
+        Permissions.onServiceDisconnected()
         releaseHold()
         forgetPowerKey()
+        // Stop lending this controller before it's destroyed, so a tile tap builds a fresh one
+        // instead of showing a panel through a torn-down object.
+        PanelLauncher.detach()
         overlay?.destroy()
         overlay = null
         appVolume?.destroy()

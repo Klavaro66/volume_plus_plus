@@ -65,10 +65,36 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Same trick, for the Quick Settings tile: the panel is an overlay window and the system
+             draws those below the shade, so it has to be raised from an activity, which is what
+             closes the shade. Invisible and finishes immediately, like the one above. -->
+        <activity
+            android:name=".ui.PanelTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".service.ColorPickService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+
+        <!-- Opens the Volume++ panel from Quick Settings, for a phone whose volume buttons no longer
+             work. Needs only draw-over-other-apps: nothing here touches the hardware keys, so the
+             accessibility service below is not a prerequisite. The label is what the OS lists in the
+             tile picker, so it is a platform resource (see res/values/strings.xml). -->
+        <service
+            android:name=".service.VolumePanelTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_nav_volume"
+            android:label="@string/qs_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <!-- Note: .service.RootUserService is deliberately NOT declared here. libsu's RootService
              is a ContextWrapper that only imitates a Service — the framework never instantiates it,

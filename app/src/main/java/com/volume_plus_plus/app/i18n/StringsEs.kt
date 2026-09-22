@@ -164,6 +164,18 @@ object SpanishStrings : Strings() {
         "El botón AJUSTES / VER MÁS del panel abre Volume++ en lugar de los ajustes de " +
             "sonido de Android."
 
+    // ── mosaico de Ajustes rápidos ──────────────────────────────────────────────────────────────
+
+    override val qsTileLabel get() = "Panel de Volume++"
+
+    override val overlayQuickTile get() = "Mosaico de Ajustes rápidos"
+    override val overlayQuickTileDetail get() =
+        "Abre el panel desde los Ajustes rápidos, para que puedas seguir usándolo si las teclas de " +
+            "volumen dejan de funcionar. Solo necesita el primer paso de arriba."
+    override val overlayQuickTileAdd get() = "Añadir mosaico"
+    override fun overlayQuickTileManual(tile: String) =
+        "Abre los Ajustes rápidos, toca Editar y arrastra el mosaico \"$tile\"."
+
     override val overlayMotion get() = "Movimiento"
     override val overlayMotionInfo get() =
         "El movimiento controla c\u00f3mo se mueve el control; la vibraci\u00f3n controla lo que notas al " +

@@ -167,6 +167,18 @@ object FrenchStrings : Strings() {
         "Le bouton PARAMÈTRES / VOIR PLUS du panneau ouvre Volume++ au lieu des " +
             "paramètres de son d'Android."
 
+    // ── tuile des Réglages rapides ──────────────────────────────────────────────────────────────
+
+    override val qsTileLabel get() = "Panneau Volume++"
+
+    override val overlayQuickTile get() = "Tuile des Réglages rapides"
+    override val overlayQuickTileDetail get() =
+        "Ouvre le panneau depuis les Réglages rapides, pour y accéder même si les touches de volume " +
+            "ne fonctionnent plus. Seule la première étape ci-dessus est nécessaire."
+    override val overlayQuickTileAdd get() = "Ajouter la tuile"
+    override fun overlayQuickTileManual(tile: String) =
+        "Ouvrez les Réglages rapides, appuyez sur Modifier, puis faites glisser la tuile \"$tile\"."
+
     override val overlayMotion get() = "Mouvement"
     override val overlayMotionInfo get() =
         "Le mouvement r\u00e8gle la fa\u00e7on dont le curseur bouge ; le retour haptique r\u00e8gle la " +

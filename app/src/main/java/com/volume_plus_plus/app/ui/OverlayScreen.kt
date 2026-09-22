@@ -1,12 +1,14 @@
 package com.volume_plus_plus.app.ui
 
 import android.app.Activity
-import android.app.NotificationManager
+import android.app.StatusBarManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -72,9 +74,11 @@ import com.volume_plus_plus.app.overlay.LiveEditSession
 import com.volume_plus_plus.app.overlay.OverlayController
 import com.volume_plus_plus.app.overlay.OverlayVersion
 import com.volume_plus_plus.app.overlay.StepHaptics
-import com.volume_plus_plus.app.service.VolumeKeyService
+import com.volume_plus_plus.app.permissions.rememberPermissionState
+import com.volume_plus_plus.app.service.VolumePanelTileService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /** Three 900ms pulses ≈ the ~3s spotlight the Mixing tab asks for, plus the scroll that precedes it. */
 private const val HIGHLIGHT_PULSES = 3
@@ -186,9 +190,11 @@ private fun OverlaySetup(
     // setting the level is exactly what a held volume key will give them.
     val vibrator = remember(context) { StepHaptics.vibrator(context) }
 
-    var canOverlay by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var accessibilityOn by remember { mutableStateOf(isAccessibilityEnabled(context)) }
-    var dndAccessOn by remember { mutableStateOf(hasDndAccess(context)) }
+    // Every grant, live: watched at the platform level rather than re-read on resume, so a switch
+    // flipped in Settings ticks here the instant it moves — including while this screen is still on
+    // screen next to it, and including the accessibility service, which reports its own connection.
+    val permissions = rememberPermissionState()
+    val canOverlay = permissions.overlay
 
     // A dedicated controller so "Preview" can show the panel without the accessibility service. It
     // gets its own volume store, left unstarted: the preview is transient, so it needs no background
@@ -202,10 +208,8 @@ private fun OverlaySetup(
         }
     }
 
+    // Only the prefs: the grants above keep themselves current without waiting for a resume.
     LifecycleResumeEffect(Unit) {
-        canOverlay = Settings.canDrawOverlays(context)
-        accessibilityOn = isAccessibilityEnabled(context)
-        dndAccessOn = hasDndAccess(context)
         systemVolumePanel = prefs.isSystemVolumePanelEnabled()
         settingsOpensApp = prefs.isSettingsOpensAppEnabled()
         holdFollowScale = prefs.getHoldFollowScale()
@@ -273,7 +277,7 @@ private fun OverlaySetup(
         StatusStep(
             title = s.setupStep(2, s.overlayStepAccessibility),
             subtitle = s.overlayStepAccessibilityDetail,
-            done = accessibilityOn,
+            done = permissions.accessibility,
             actionLabel = s.openSettings,
             onAction = {
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -285,7 +289,7 @@ private fun OverlaySetup(
         StatusStep(
             title = s.setupStep(3, s.overlayStepDnd),
             subtitle = s.overlayStepDndDetail,
-            done = dndAccessOn,
+            done = permissions.dnd,
             actionLabel = s.openSettings,
             onAction = {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
@@ -294,7 +298,7 @@ private fun OverlaySetup(
             },
         )
 
-        val ready = canOverlay && accessibilityOn && dndAccessOn
+        val ready = permissions.ready
         Text(
             text = when {
                 // With the system panel in charge the overlay never opens, so don't claim it's ready.
@@ -341,6 +345,19 @@ private fun OverlaySetup(
                 },
             )
         }
+        // Reaching the panel without the volume keys. Deliberately not tied to `styleEnabled`:
+        // the tile opens the Volume++ panel whether or not the keys are left to Android's own, and
+        // it needs neither the accessibility service nor DND access — only step 1.
+        val canRequestTile = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        SettingAction(
+            title = s.overlayQuickTile,
+            subtitle = s.overlayQuickTileDetail,
+            // Below Android 13 an app has no way to offer a tile, so there is nothing to press and
+            // the row explains how to drag it in by hand instead.
+            actionLabel = if (canRequestTile) s.overlayQuickTileAdd else null,
+            onAction = { requestAddTile(context, s.qsTileLabel) },
+            footnote = if (canRequestTile) null else s.overlayQuickTileManual(s.qsTileLabel),
+        )
         Text(
             text = s.overlayStyle,
             style = MaterialTheme.typography.titleMedium,
@@ -632,6 +649,73 @@ private fun SkinPicker(
     }
 }
 
+/**
+ * A row whose action is a button rather than a switch, in the same card as [SettingSwitch] so the
+ * options on this page still read as one list. [footnote] takes the button's place where the
+ * platform gives us no way to perform the action, and says what to do by hand instead.
+ */
+@Composable
+private fun SettingAction(
+    title: String,
+    subtitle: String,
+    actionLabel: String?,
+    onAction: () -> Unit,
+    footnote: String? = null,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 8.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (footnote != null) {
+                    Text(
+                        text = footnote,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+            }
+            if (actionLabel != null) {
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = onAction) { Text(actionLabel) }
+            }
+        }
+    }
+}
+
+/**
+ * Ask the system to offer the Quick Settings tile: Android 13+ shows its own confirmation dialog and
+ * places the tile if the user accepts. There is no equivalent below that, so this is a no-op there
+ * and [SettingAction]'s footnote explains the manual route.
+ */
+private fun requestAddTile(context: Context, label: String) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val statusBar = context.getSystemService(StatusBarManager::class.java) ?: return
+    runCatching {
+        statusBar.requestAddTileService(
+            ComponentName(context, VolumePanelTileService::class.java),
+            label,
+            android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_nav_volume),
+            ContextCompat.getMainExecutor(context),
+        ) { /* the system dialog already tells the user how it went */ }
+    }
+}
+
 @Composable
 private fun StatusStep(
     title: String,
@@ -680,19 +764,3 @@ private fun StatusStep(
 private fun disabledContentColor(): Color =
     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
 
-/** True if our [VolumeKeyService] appears in the system's enabled-accessibility-services list. */
-private fun isAccessibilityEnabled(context: Context): Boolean {
-    val expected = ComponentName(context, VolumeKeyService::class.java).flattenToString()
-    val enabled = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-    ) ?: return false
-    return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
-}
-
-/** True if we hold Do Not Disturb / notification-policy access, needed to change the ringer mode. */
-private fun hasDndAccess(context: Context): Boolean {
-    val notificationManager =
-        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    return notificationManager.isNotificationPolicyAccessGranted
-}

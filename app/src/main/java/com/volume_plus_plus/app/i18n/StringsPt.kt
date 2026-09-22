@@ -168,6 +168,18 @@ object PortugueseStrings : Strings() {
         "O botão CONFIGURAÇÕES / VER MAIS do painel abre o Volume++ em vez das " +
             "configurações de som do Android."
 
+    // ── bloco das Configurações rápidas ─────────────────────────────────────────────────────────
+
+    override val qsTileLabel get() = "Painel do Volume++"
+
+    override val overlayQuickTile get() = "Bloco das Configurações rápidas"
+    override val overlayQuickTileDetail get() =
+        "Abre o painel pelas Configurações rápidas, para você continuar usando se as teclas de " +
+            "volume pararem de funcionar. Só precisa do primeiro passo acima."
+    override val overlayQuickTileAdd get() = "Adicionar bloco"
+    override fun overlayQuickTileManual(tile: String) =
+        "Abra as Configurações rápidas, toque em Editar e arraste o bloco \"$tile\"."
+
     override val overlayMotion get() = "Movimento"
     override val overlayMotionInfo get() =
         "O movimento controla como o controle se mexe; a vibra\u00e7\u00e3o controla o que voc\u00ea sente ao " +
