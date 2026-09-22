@@ -71,6 +71,7 @@ import com.volume_plus_plus.app.overlay.AppVolumeController
 import com.volume_plus_plus.app.overlay.EditOrientation
 import com.volume_plus_plus.app.overlay.LiveEditMode
 import com.volume_plus_plus.app.overlay.LiveEditSession
+import com.volume_plus_plus.app.overlay.MediaBooster
 import com.volume_plus_plus.app.overlay.OverlayController
 import com.volume_plus_plus.app.overlay.OverlayVersion
 import com.volume_plus_plus.app.overlay.StepHaptics
@@ -182,6 +183,10 @@ private fun OverlaySetup(
     var systemVolumePanel by remember { mutableStateOf(prefs.isSystemVolumePanelEnabled()) }
     var settingsOpensApp by remember { mutableStateOf(prefs.isSettingsOpensAppEnabled()) }
     var rememberAppVolumes by remember { mutableStateOf(prefs.isRememberAppVolumesEnabled()) }
+    var mediaBoost by remember { mutableStateOf(prefs.isMediaBoostEnabled()) }
+    var boostAvailable by remember {
+        mutableStateOf(MediaBooster.availability != MediaBooster.Availability.UNAVAILABLE)
+    }
     var holdFollowScale by remember { mutableStateOf(prefs.getHoldFollowScale()) }
     var holdSettleScale by remember { mutableStateOf(prefs.getHoldSettleScale()) }
     var holdStepHaptics by remember { mutableStateOf(prefs.isHoldStepHapticsEnabled()) }
@@ -214,6 +219,11 @@ private fun OverlaySetup(
         systemVolumePanel = prefs.isSystemVolumePanelEnabled()
         settingsOpensApp = prefs.isSettingsOpensAppEnabled()
         rememberAppVolumes = prefs.isRememberAppVolumesEnabled()
+        mediaBoost = prefs.isMediaBoostEnabled()
+        // The user may have just set Shizuku or root up on the Mixing tab, which can turn a device
+        // that couldn't boost into one that can.
+        MediaBooster.refreshAvailability()
+        boostAvailable = MediaBooster.availability != MediaBooster.Availability.UNAVAILABLE
         holdFollowScale = prefs.getHoldFollowScale()
         holdSettleScale = prefs.getHoldSettleScale()
             holdStepHaptics = prefs.isHoldStepHapticsEnabled()
@@ -350,6 +360,22 @@ private fun OverlaySetup(
         // Not tied to `styleEnabled`: the per-app levels are applied by the privileged service
         // whether or not the volume keys open our panel, so this keeps working with the system
         // panel in charge.
+        SettingSwitch(
+            title = s.overlayMediaBoost,
+            subtitle = if (boostAvailable) s.overlayMediaBoostDetail
+            else s.overlayMediaBoostUnavailable,
+            // The ⓘ carries the distortion and hearing warning, the way the step-haptics row does.
+            info = s.overlayMediaBoostInfo,
+            // Greyed with the system-panel switch, since the boost rides on volume keys we no longer
+            // handle, and greyed when the platform simply refuses to give us the gain.
+            checked = mediaBoost && boostAvailable,
+            enabled = styleEnabled && boostAvailable,
+            onCheckedChange = {
+                mediaBoost = it
+                prefs.setMediaBoostEnabled(it)
+                if (!it) MediaBooster.reset()
+            },
+        )
         SettingSwitch(
             title = s.overlayRememberAppVolumes,
             subtitle = s.overlayRememberAppVolumesDetail,

@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Short haptic tick when the user selects the vibrate ringer mode. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The media booster attaches a LoudnessEnhancer to the audio output. Normal-level, so it is
+         granted at install — but it is NOT sufficient for an effect on the global output mix, which
+         needs the signature-level MODIFY_AUDIO_ROUTING and therefore the privileged service. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- The screen eyedropper reads a single frame of the display through MediaProjection, which
          the platform only allows from a foreground service of the matching type. The notification
          that service posts is also the user's control surface while they browse for a colour. -->

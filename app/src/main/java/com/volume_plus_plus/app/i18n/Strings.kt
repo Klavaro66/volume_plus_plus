@@ -223,6 +223,18 @@ open class Strings {
         "The panel's SETTINGS / SEE MORE button opens Volume++ instead of Android's sound " +
             "settings."
 
+    open val overlayMediaBoost get() = "Media volume booster"
+    open val overlayMediaBoostDetail get() =
+        "At 100%, press Volume Up twice to go louder still — up to 120%."
+    open val overlayMediaBoostUnavailable get() =
+        "This device won't let Volume++ boost the volume. Shizuku or root may make it possible."
+    open val overlayMediaBoostInfo get() =
+        "The booster adds up to 6 dB of gain on top of a volume that is already at maximum, so the " +
+            "output goes past what the manufacturer tuned the speakers for.\n\n" +
+            "Expect distortion on loud material, and be careful with headphones: sustained " +
+            "listening at boosted volume can damage your hearing. The boost clears itself whenever " +
+            "you drop below 100% or change audio output."
+
     open val overlayRememberAppVolumes get() = "Remember each app's volume"
     open val overlayRememberAppVolumesDetail get() =
         "An app plays at the level you last gave it instead of starting at full. Set an app back " +

@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.volume_plus_plus.app.overlay.AppVolumeController
+import com.volume_plus_plus.app.overlay.MediaBooster
 import com.volume_plus_plus.app.overlay.OverlayController
 import com.volume_plus_plus.app.overlay.PanelLauncher
 import com.volume_plus_plus.app.overlay.StepHaptics
@@ -112,7 +113,9 @@ class VolumeKeyService : AccessibilityService() {
             // Deliberately kept running once the volume is pinned at an end of its range: the step
             // does nothing, but the panel stays on screen for as long as the key is held, which is
             // what the stock panels these skins reproduce do.
-            if (overlay?.adjustAndShow(heldDirection) == true &&
+            // Flagged as a repeat so the booster can refuse it: a held key must never climb past
+            // 100% into boost, only deliberate presses may. See [MediaBooster.handleKey].
+            if (overlay?.adjustAndShow(heldDirection, fromAutoRepeat = true) == true &&
                 prefs.isHoldStepHapticsEnabled()
             ) {
                 tick()
@@ -152,6 +155,10 @@ class VolumeKeyService : AccessibilityService() {
         Permissions.onServiceConnected()
         // Ensure the privileged link is alive even if the main UI was never opened this process.
         PrivilegedManager.init(this)
+        // A reconnect must not inherit the previous connection's boost, for the same reason it must
+        // not inherit its hold.
+        MediaBooster.init(this)
+        MediaBooster.reset()
         // A repeat connect must not inherit the previous connection's hold: the old panel is about to
         // be torn down, but heldDirection and any queued repeat would outlive it and go on driving
         // the volume through the newly built one.
@@ -289,6 +296,9 @@ class VolumeKeyService : AccessibilityService() {
         Permissions.onServiceDisconnected()
         releaseHold()
         forgetPowerKey()
+        // Safety-critical: the gain lives in the audio server, not in this process, so a boost left
+        // applied would outlast the service being disabled with no UI anywhere left to undo it.
+        MediaBooster.shutdown()
         // Stop lending this controller before it's destroyed, so a tile tap builds a fresh one
         // instead of showing a panel through a torn-down object.
         PanelLauncher.detach()

@@ -258,6 +258,8 @@ class OverlayController(
      *  the system panel marks the stream you are actually working on. Note that this is presentation
      *  only: the volume keys go on driving the call stream either way (see [keyStream]). */
     private var callFocusStream = AudioManager.STREAM_VOICE_CALL
+    /** The above-100% indicator, present only on panels that draw one and only while boosting. */
+    private var boostBar: BoostBar? = null
     /** The Android 9–11 ringer button currently on screen, so a mode change can retint it in place
      *  instead of rebuilding the whole panel (which cancels the app-sync load and drops frames, and
      *  is what made rapid mode taps feel laggy). */
@@ -392,7 +394,7 @@ class OverlayController(
         return true
     }
 
-    fun adjustAndShow(direction: Int): Boolean {
+    fun adjustAndShow(direction: Int, fromAutoRepeat: Boolean = false): Boolean {
         val dir = if (direction >= 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER
         // In a call the keys move the call stream, exactly as they do on a stock device, and the
         // panel they raise puts that stream under them as its main slider.
@@ -400,6 +402,28 @@ class OverlayController(
         val before = audioManager.getStreamVolume(stream)
         val max = audioManager.getStreamMaxVolume(stream)
         val min = streamMin(stream)
+        // The booster only ever applies to media, so a call press skips it outright: it must neither
+        // claim the press nor invalidate a boost that is sitting on a media stream nobody just moved.
+        if (stream == AudioManager.STREAM_MUSIC) {
+            // The booster gets first refusal on the press, before the stream is touched. It only ever
+            // claims one while the stream is already pinned at maximum (raising) or a boost is applied
+            // (lowering); in both cases the write below would either do nothing or wrongly drop the real
+            // volume, so it must not run. Editors never touch real audio state, so they never ask.
+            if (!isEditor() && boostEnabled()) {
+                if (MediaBooster.handleKey(direction, before >= max, fromAutoRepeat) ==
+                    MediaBooster.Verdict.CONSUMED
+                ) {
+                    showOrRefreshPanel()
+                    // A boost notch is a real change, so the held-key step haptic fires as usual.
+                    return true
+                }
+            } else if (!isEditor()) {
+                MediaBooster.reset()
+            }
+            // Any move that leaves the stream below its maximum invalidates a boost sitting on top of it.
+            if (!isEditor()) MediaBooster.validate(before >= max && direction >= 0)
+        }
+
         val changed = if (direction >= 0) before < max else before > min
         // No FLAG_SHOW_UI: we suppress the system panel and render our own instead.
         runCatching { audioManager.adjustStreamVolume(stream, dir, 0) }
@@ -431,7 +455,69 @@ class OverlayController(
         } else {
             show()
         }
+        refreshBoost()
         return changed
+    }
+
+    /** Whether the booster may claim a press: switched on, and the device can actually apply gain. */
+    private fun boostEnabled(): Boolean =
+        prefs.isMediaBoostEnabled() &&
+            MediaBooster.availability != MediaBooster.Availability.UNAVAILABLE
+
+    /**
+     * Put the panel on screen, or keep an already-visible one alive, without touching the media
+     * slider's level — the boost sits *above* the stream, so the stream's own slider hasn't moved.
+     */
+    private fun showOrRefreshPanel() {
+        if (root != null && !dismissing && mediaSlider != null) {
+            if (generic78OrderedRows.isNotEmpty()) selectGenericRow(mediaSlider)
+            armAutoHide()
+            refreshBoost()
+        } else {
+            show()
+        }
+    }
+
+    /**
+     * Build the boost indicator and add it to [container] at [index], starting hidden.
+     *
+     * Every skin gets one. The obvious objection is pixel-accuracy — these panels are deliberate
+     * recreations of stock ones, and no stock panel has a boost bar — but the switch is off by
+     * default, so anyone who leaves it off keeps an untouched replica. A user who turns it on has
+     * asked for behaviour no stock panel has; showing it only on the modern skins would instead
+     * leave an Android 7–8 user with a switch that visibly does nothing.
+     */
+    private fun addBoostBar(container: ViewGroup, index: Int, vertical: Boolean, showLabel: Boolean) {
+        if (isEditor()) return
+        val bar = BoostBar(
+            context = context,
+            fillColor = style.accentColor,
+            trackColor = style.trackColor,
+            labelColor = style.textColor,
+            showLabel = showLabel,
+            vertical = vertical,
+        ).apply { visibility = View.GONE }
+        boostBar = bar
+        val lp = if (vertical) {
+            LinearLayout.LayoutParams(dp(18), dp(44)).apply { bottomMargin = dp(4) }
+        } else {
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(18),
+            ).apply { topMargin = dp(2); bottomMargin = dp(2) }
+        }
+        container.addView(bar, index, lp)
+        refreshBoost()
+    }
+
+    /** Push the current boost state onto the bar, if this panel is showing one. */
+    private fun refreshBoost() {
+        val bar = boostBar ?: return
+        val on = !isEditor() && boostEnabled() && MediaBooster.active
+        bar.visibility = if (on) View.VISIBLE else View.GONE
+        if (on) {
+            bar.fraction = MediaBooster.fraction
+            bar.percent = MediaBooster.percent
+        }
     }
 
     fun show() {
@@ -570,6 +656,7 @@ class OverlayController(
         callColumnSlider = null
         mediaColumnSlider = null
         legacyIconRefresh = null
+        boostBar = null
         ringerIcon = null
         ringerButtons = null
         // A fresh panel starts from the device's real ringer mode again.
@@ -1415,6 +1502,14 @@ class OverlayController(
         // the secondary the key handler reconciles beside it, since it can move under us mid-call.
         mediaSlider = call ?: media
         secondarySlider = if (call != null) media else null
+        // A full-width bar above the Media row. This panel stacks its rows horizontally when the
+        // sliders are vertical, in which case the bar goes alongside them rather than above.
+        addBoostBar(
+            content,
+            index = 0,
+            vertical = style.orientation == SliderOrientation.VERTICAL,
+            showLabel = style.orientation != SliderOrientation.VERTICAL,
+        )
 
         val ring = streamSlider(
             AudioManager.STREAM_RING,
@@ -1824,6 +1919,9 @@ class OverlayController(
             }
         }
 
+        // Above the media slider, so the boost reads as sitting on top of it.
+        addBoostBar(card, index = 0, vertical = true, showLabel = false)
+
         if (callMode) {
             val call = makeSlider(
                 icon = null, glyph = null, label = null, chevron = ChevronDir.NONE, onChevron = {},
@@ -1961,6 +2059,9 @@ class OverlayController(
         // The sheet rows use the outlined icon set (hollow-head note, hollow handset, outlined
         // bell) across Android 11–14; 9 and 10 hide the row icons entirely.
         addStreamRow911(rows, R.drawable.ic_stream_media_outline, strings.panelRowMedia, AudioManager.STREAM_MUSIC)
+        // Directly under Media, which is what the volume keys still drive while this sheet is open —
+        // without it a press at maximum would do nothing visible at all.
+        addBoostBar(rows, index = rows.childCount, vertical = false, showLabel = true)
         addStreamRow911(rows, R.drawable.ic_stream_call_outline, strings.panelRowCall, AudioManager.STREAM_VOICE_CALL)
         if (isModernSheet() && isAndroid14IconSet()) {
             // Android 14 draws Ring as the ringing handset; unlike Media it keeps that icon even
@@ -2298,6 +2399,8 @@ class OverlayController(
 
         // Media keeps the note icon, switching only to Android 15's crossed speaker at mute.
         addPillRow(body, R.drawable.ic_stream_media, "Media", AudioManager.STREAM_MUSIC, mutedIconRes = R.drawable.ic_ring_megaphone_off)
+        // Under Media, which the volume keys still drive while this sheet is open.
+        addBoostBar(body, index = body.childCount, vertical = false, showLabel = true)
         // 16 has already placed the call at the top; 15 keeps it here, second.
         if (!foldCall) addPillRow(rows, R.drawable.ic_stream_call, "Call", AudioManager.STREAM_VOICE_CALL)
         // Ring swaps to the vibrate icon at zero; muting it makes Notification unavailable live;
@@ -2985,6 +3088,9 @@ class OverlayController(
         card.addView(more, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         if (!callMode) {
+            // Above everything, so the boost reads as sitting on top of the media capsule below it. The
+            // card's LayoutTransition animates it in and out, and the window resizes with it.
+            addBoostBar(card, index = 0, vertical = true, showLabel = false)
             container.addView(card, LinearLayout.LayoutParams(cardW, LinearLayout.LayoutParams.WRAP_CONTENT))
             return
         }
@@ -2997,6 +3103,9 @@ class OverlayController(
             gravity = Gravity.BOTTOM
         }
         val mediaCard = mediaColumnCard(corner)
+        // The boost sits over media, not over the call, so it rides the media column here — where the
+        // stream it applies to actually is.
+        addBoostBar(mediaCard, index = 0, vertical = true, showLabel = false)
         row.addView(
             mediaCard,
             LinearLayout.LayoutParams(cardW, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -3309,6 +3418,12 @@ class OverlayController(
         val min = streamMin(streamType).coerceIn(0, max)
         val span = (max - min).coerceAtLeast(1)
         val target = (min + level * span).roundToInt().coerceIn(min, max)
+        // Dragging the media slider anywhere below its maximum invalidates a boost sitting on top of
+        // it, so the panel can never show gain applied over a volume that is no longer full.
+        if (streamType == AudioManager.STREAM_MUSIC && target < max) {
+            MediaBooster.reset()
+            refreshBoost()
+        }
         // Before the write, so the buzz lands with the finger rather than after the platform has
         // been round-tripped. Every skin's stream sliders funnel through here, so this is the one
         // place that gives all nine styles the same drag feedback.

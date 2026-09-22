@@ -81,6 +81,17 @@ class OverlayPrefs(context: Context) {
     }
 
     /**
+     * Whether Volume Up past 100% may engage the media booster. Off by default, and deliberately so:
+     * it drives the output above the level the manufacturer calibrated for, so it can distort, and
+     * sustained listening up there can damage hearing. Never on unless the user asks for it.
+     */
+    fun isMediaBoostEnabled(): Boolean = prefs.getBoolean(KEY_MEDIA_BOOST, false)
+
+    fun setMediaBoostEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_MEDIA_BOOST, enabled).apply()
+    }
+
+    /**
      * Whether a per-app volume should be remembered and restored the next time that app plays,
      * rather than every new playback starting at full. On by default — it is what people expect of a
      * per-app volume, and the levels are already stored per package either way; switching it off
@@ -128,6 +139,7 @@ class OverlayPrefs(context: Context) {
         const val KEY_SYSTEM_VOLUME_PANEL = "system_volume_panel"
         const val KEY_SETTINGS_OPENS_APP = "settings_opens_app"
         const val KEY_REMEMBER_APP_VOLUMES = "remember_app_volumes"
+        const val KEY_MEDIA_BOOST = "media_boost"
         const val KEY_HOLD_FOLLOW_SCALE = "hold_follow_scale"
         const val KEY_HOLD_SETTLE_SCALE = "hold_settle_scale"
         const val KEY_HOLD_STEP_HAPTICS = "hold_step_haptics"
