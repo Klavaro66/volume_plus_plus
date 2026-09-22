@@ -361,6 +361,10 @@ open class Strings {
     open val liveEditUseDefault get() = "Use default"
     open val liveEditPickFromScreen get() = "Pick from screen"
 
+    /** Fills every swatch on the panel being edited from the device's own Material You palette.
+     *  Only shown on Android 12+, where there is a system palette to read (see [systemPalette]). */
+    open val liveEditUseSystemColours get() = "Use system colours"
+
     /** Editor bar's component switch — short forms, so they fit a floating bar. */
     open val liveEditComponentMain get() = "Main"
     open val liveEditComponentExpanded get() = "Expanded"

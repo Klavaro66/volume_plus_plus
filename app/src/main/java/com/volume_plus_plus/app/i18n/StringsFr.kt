@@ -279,6 +279,7 @@ object FrenchStrings : Strings() {
         "Touchez le panneau ou un échantillon, puis réglez ou saisissez une couleur"
     override val liveEditUseDefault get() = "Valeur par défaut"
     override val liveEditPickFromScreen get() = "Prélever à l'écran"
+    override val liveEditUseSystemColours get() = "Utiliser les couleurs du système"
 
     override val liveEditComponentMain get() = "Principal"
     override val liveEditComponentExpanded get() = "Étendu"
