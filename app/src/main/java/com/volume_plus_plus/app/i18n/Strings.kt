@@ -71,6 +71,25 @@ open class Strings {
     open val volumeTitle get() = "Volume"
     open val volumeSubtitle get() = "Control each sound channel"
 
+    /**
+     * The level beside a slider, as the familiar percentage *and* the device's real step position —
+     * e.g. `73% · 11/15`. How many steps a channel has is fixed by the device's audio policy and
+     * can't be changed by an app, so showing them is what explains why a level lands on 73% and not
+     * on 74%: there is no position in between. Digits and punctuation only, so it needs no
+     * translation unless a language wants a different separator.
+     */
+    open fun volumeLevel(percent: Int, step: Int, steps: Int) = "$percent% · $step/$steps"
+
+    /** The − and + buttons beside each slider, as a screen reader announces them. [channel] is the
+     *  row's own name, e.g. "Media". */
+    open fun volumeStepDown(channel: String) = "Turn $channel down one step"
+    open fun volumeStepUp(channel: String) = "Turn $channel up one step"
+
+    /** The same pair of buttons on a *settings* slider, which is tuned rather than turned up or
+     *  down. [setting] is the row's own title, e.g. "Hold follow speed". */
+    open fun settingStepDown(setting: String) = "Decrease $setting"
+    open fun settingStepUp(setting: String) = "Increase $setting"
+
     open val streamMedia get() = "Media"
     open val streamCall get() = "Call"
     open val streamRing get() = "Ring"

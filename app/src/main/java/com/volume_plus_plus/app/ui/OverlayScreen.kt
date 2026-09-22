@@ -422,7 +422,10 @@ private fun OverlaySetup(
             enabled = holdStepHaptics,
             value = holdStepHapticIntensity,
             valueRange = 0.5f..2.0f,
-            steps = 150,
+            // 149, like the other two rows, so one notch is exactly 0.01 and a ± press moves the
+            // readout by a whole percentage point. At 150 the notch is 1.5/151, which drifts off
+            // the grid and would leave the stepper landing on values a drag can't reach.
+            steps = 149,
             onValueChange = {
                 val previous = holdStepHapticIntensity
                 holdStepHapticIntensity = it
@@ -430,6 +433,13 @@ private fun OverlaySetup(
                 // Sample as it's dragged, but only each 10% of travel — the slider emits far too
                 // many values to buzz on every one, and a tick per notch reads as a detent.
                 if ((it * 10).toInt() != (previous * 10).toInt()) StepHaptics.play(vibrator, it)
+            },
+            // A ± press is a single deliberate notch, so it always samples — the drag rule above
+            // would swallow it, since one notch almost never crosses a 10% bucket.
+            onStepChange = {
+                holdStepHapticIntensity = it
+                prefs.setHoldStepHapticIntensity(it)
+                StepHaptics.play(vibrator, it)
             },
         )
         Button(
@@ -459,7 +469,14 @@ private fun OverlaySetup(
     }
 }
 
-/** A titled slider. [info] adds the ⓘ button that explains, in plain words, what it changes. */
+/**
+ * A titled slider. [info] adds the ⓘ button that explains, in plain words, what it changes.
+ *
+ * The − / + buttons move exactly one notch, so a value can be set precisely without fighting a drag
+ * — the same control the Volume tab's stream rows have. [onStepChange] lets a row react differently
+ * to a discrete press than to a drag; it falls back to [onValueChange], which is right for every row
+ * whose only job is to store the new value.
+ */
 @Composable
 private fun SettingSlider(
     title: String,
@@ -469,7 +486,16 @@ private fun SettingSlider(
     info: String? = null,
     enabled: Boolean = true,
     onValueChange: (Float) -> Unit,
+    onStepChange: ((Float) -> Unit)? = null,
 ) {
+    val s = strings()
+    // One notch of the slider's own grid, so a stepped value always lands on a position a drag could
+    // also reach. With the 0.5..2.0 range and 149 steps that is exactly 0.01 — one percentage point.
+    val notch = (valueRange.endInclusive - valueRange.start) / (steps + 1)
+    val applyStep = onStepChange ?: onValueChange
+    fun step(direction: Int) {
+        applyStep((value + direction * notch).coerceIn(valueRange))
+    }
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -487,7 +513,9 @@ private fun SettingSlider(
                         color = if (enabled) Color.Unspecified else disabledContentColor(),
                     )
                     Text(
-                        text = strings().percent((value * 100).toInt()),
+                        // Rounded, not truncated: a stepper makes an off-by-one readout obvious,
+                        // where a drag past it never stopped long enough to be noticed.
+                        text = strings().percent((value * 100).roundToInt()),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
                         else disabledContentColor(),
@@ -495,14 +523,28 @@ private fun SettingSlider(
                 }
                 if (info != null) InfoButton(title = title, body = info)
             }
-            VolumeSlider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                steps = steps,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StepButton(
+                    icon = R.drawable.ic_remove,
+                    description = s.settingStepDown(title),
+                    enabled = enabled && value > valueRange.start + notch / 2,
+                    onStep = { step(-1) },
+                )
+                VolumeSlider(
+                    value = value,
+                    onValueChange = onValueChange,
+                    valueRange = valueRange,
+                    steps = steps,
+                    enabled = enabled,
+                    modifier = Modifier.weight(1f),
+                )
+                StepButton(
+                    icon = R.drawable.ic_add,
+                    description = s.settingStepUp(title),
+                    enabled = enabled && value < valueRange.endInclusive - notch / 2,
+                    onStep = { step(1) },
+                )
+            }
         }
     }
 }

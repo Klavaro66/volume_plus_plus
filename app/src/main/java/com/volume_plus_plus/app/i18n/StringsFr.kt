@@ -50,6 +50,9 @@ object FrenchStrings : Strings() {
     override val volumeTitle get() = "Volume"
     override val volumeSubtitle get() = "Réglez chaque canal audio"
 
+    override fun volumeStepDown(channel: String) = "Baisser $channel d'un cran"
+    override fun volumeStepUp(channel: String) = "Monter $channel d'un cran"
+
     override val streamMedia get() = "Multimédia"
     override val streamCall get() = "Appel"
     override val streamRing get() = "Sonnerie"

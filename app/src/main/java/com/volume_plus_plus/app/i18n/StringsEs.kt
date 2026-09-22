@@ -50,6 +50,9 @@ object SpanishStrings : Strings() {
     override val volumeTitle get() = "Volumen"
     override val volumeSubtitle get() = "Controla cada canal de sonido"
 
+    override fun volumeStepDown(channel: String) = "Bajar $channel un paso"
+    override fun volumeStepUp(channel: String) = "Subir $channel un paso"
+
     override val streamMedia get() = "Multimedia"
     override val streamCall get() = "Llamada"
     override val streamRing get() = "Timbre"
