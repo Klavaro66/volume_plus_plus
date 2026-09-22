@@ -347,6 +347,7 @@ object PortugueseStrings : Strings() {
     override val panelTurnOffNow get() = "DESATIVAR AGORA"
 
     override val panelAudioWillPlayOn get() = "O áudio será reproduzido em"
+    override val panelCallingOn get() = "Chamando em"
     override val panelConnectADevice get() = "Conectar um dispositivo"
     override val outputThisPhone get() = "Este telefone"
     override val outputWiredHeadphones get() = "Fones com fio"

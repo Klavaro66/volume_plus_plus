@@ -409,6 +409,9 @@ open class Strings {
 
     // The Android 15 skin's media-output card and picker.
     open val panelAudioWillPlayOn get() = "Audio will play on"
+
+    /** The same card while a call is in progress, where it names the call's output instead. */
+    open val panelCallingOn get() = "Calling on"
     open val panelConnectADevice get() = "Connect a device"
     open val outputThisPhone get() = "This phone"
     open val outputWiredHeadphones get() = "Wired headphones"

@@ -646,7 +646,7 @@ class LiveEditSession(
      *  reference palette (matching the renderer's [buildStyle]) so its chips show the colours actually
      *  drawn; every other component seeds from the plain skin style. */
     private fun seedBaseStyle(): OverlayStyle =
-        if (config.component == PanelComponent.EXPANDED && version.iconSet == IconSet.ANDROID_15)
+        if (config.component == PanelComponent.EXPANDED && version.iconSet?.usesOutputSheet == true)
             if (dark) baseStyle.withAndroid15SheetDark() else baseStyle.withAndroid15SheetLight()
         else baseStyle
 

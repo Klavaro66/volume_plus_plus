@@ -26,11 +26,11 @@ class OverlayPrefs(context: Context) {
         prefs.edit().putString(KEY_SKIN, skin.name).apply()
     }
 
-    /** The icon set for the Android 13–15 skin (which OS revision's panel to mimic). Defaults to
-     *  Android 15 so a first-run install opens on the newest style (see [defaultSkin]). */
+    /** The icon set for the Android 13–16 skin (which OS revision's panel to mimic). Defaults to
+     *  Android 16 so a first-run install opens on the newest style (see [defaultSkin]). */
     fun getIconSet(): IconSet {
-        val name = prefs.getString(KEY_ICON_SET, null) ?: return IconSet.ANDROID_15
-        return runCatching { IconSet.valueOf(name) }.getOrDefault(IconSet.ANDROID_15)
+        val name = prefs.getString(KEY_ICON_SET, null) ?: return IconSet.ANDROID_16
+        return runCatching { IconSet.valueOf(name) }.getOrDefault(IconSet.ANDROID_16)
     }
 
     fun setIconSet(set: IconSet) {
