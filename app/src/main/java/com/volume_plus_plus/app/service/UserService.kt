@@ -5,6 +5,7 @@ import android.media.AudioManager
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import com.volume_plus_plus.app.IUserService
+import com.volume_plus_plus.app.audio.BoostPolicy
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -174,7 +175,7 @@ class UserService() : IUserService.Stub() {
      * from here.
      */
     override fun setLoudnessGain(gainMillibels: Int): String {
-        val gain = gainMillibels.coerceIn(0, MAX_GAIN_MB)
+        val gain = BoostPolicy.clampGain(gainMillibels)
         if (gain == 0) {
             releaseEnhancer()
             return ""
@@ -236,10 +237,6 @@ class UserService() : IUserService.Stub() {
     private companion object {
         /** AudioPlaybackConfiguration.PLAYER_STATE_STARTED — the player is actively running. */
         const val PLAYER_STATE_STARTED = 2
-
-        /** Ceiling on the loudness boost (mB). +6 dB is the app's maximum; this is the hard stop
-         *  in the privileged process, so a bad caller can't drive the output arbitrarily loud. */
-        const val MAX_GAIN_MB = 600
 
         /**
          * AudioAttributes usages that represent audio the user is actually listening to

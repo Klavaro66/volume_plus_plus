@@ -1,6 +1,8 @@
 package com.volume_plus_plus.app.data
 
 import android.content.Context
+import androidx.core.content.edit
+import com.volume_plus_plus.app.audio.BoostPolicy
 import com.volume_plus_plus.app.overlay.IconSet
 import com.volume_plus_plus.app.overlay.LegacyVersion
 import com.volume_plus_plus.app.overlay.OverlaySkin
@@ -91,6 +93,14 @@ class OverlayPrefs(context: Context) {
         prefs.edit().putBoolean(KEY_MEDIA_BOOST, enabled).apply()
     }
 
+    fun getMediaBoostMaxSteps(): Int = BoostPolicy.normalizeMaxSteps(
+        prefs.getInt(KEY_MEDIA_BOOST_MAX_STEPS, BoostPolicy.DEFAULT_MAX_STEPS),
+    )
+
+    fun setMediaBoostMaxSteps(steps: Int) {
+        prefs.edit { putInt(KEY_MEDIA_BOOST_MAX_STEPS, BoostPolicy.normalizeMaxSteps(steps)) }
+    }
+
     /**
      * Whether a per-app volume should be remembered and restored the next time that app plays,
      * rather than every new playback starting at full. On by default — it is what people expect of a
@@ -140,6 +150,7 @@ class OverlayPrefs(context: Context) {
         const val KEY_SETTINGS_OPENS_APP = "settings_opens_app"
         const val KEY_REMEMBER_APP_VOLUMES = "remember_app_volumes"
         const val KEY_MEDIA_BOOST = "media_boost"
+        const val KEY_MEDIA_BOOST_MAX_STEPS = "media_boost_max_steps"
         const val KEY_HOLD_FOLLOW_SCALE = "hold_follow_scale"
         const val KEY_HOLD_SETTLE_SCALE = "hold_settle_scale"
         const val KEY_HOLD_STEP_HAPTICS = "hold_step_haptics"
